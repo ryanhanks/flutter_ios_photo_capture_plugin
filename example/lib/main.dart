@@ -34,8 +34,6 @@ class _PhotoCaptureDemoAppState extends State<PhotoCaptureDemoApp> {
 
   String imagePath;
 
-
-
   @override
   Widget build(BuildContext context) {
     return new MaterialApp(
@@ -53,18 +51,26 @@ class _PhotoCaptureDemoAppState extends State<PhotoCaptureDemoApp> {
           title: const Text('Plugin example app'),
         ),
         body: new Center(
-            child: new Column(children: [
-              new AspectRatio(
-                aspectRatio: 1.0,
-                child: new Texture(textureId: photoCaptureSession.textureId)),
-              renderImagePath()
-            ]),
-          ),
+          child: new Column(children: [
+            new ConstrainedBox(
+              constraints: new BoxConstraints.expand(height: 200.0, width: 200.0),
+              child: new AspectRatio(
+                  aspectRatio: 1.0,
+                  child: new Texture(textureId: photoCaptureSession.textureId)),
+            ),
+        new ConstrainedBox(
+            constraints: new BoxConstraints.expand(height: 200.0, width: 200.0),
+            child: renderImagePath(),),
+          ]),
+        ),
       ),
     );
   }
+
   Widget renderImagePath() {
-    if (imagePath == null) { return new Text(""); }
+    if (imagePath == null) {
+      return new Text("");
+    }
     return renderImage();
 //    return new Text(imagePath);
   }

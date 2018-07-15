@@ -10,6 +10,71 @@ import Foundation
 import AVFoundation
 import VideoToolbox
 
+public extension UIImage {
+    
+    /// Extension to fix orientation of an UIImage without EXIF
+    func fixOrientation() -> UIImage {
+        
+        guard let cgImage = cgImage else { return self }
+        
+        if imageOrientation == .up { return self }
+        
+        var transform = CGAffineTransform.identity
+        
+        switch imageOrientation {
+            
+        case .down, .downMirrored:
+            transform = transform.translatedBy(x: size.width, y: size.height)
+            transform = transform.rotated(by: CGFloat(M_PI))
+            
+        case .left, .leftMirrored:
+            transform = transform.translatedBy(x: size.width, y: 0)
+            transform = transform.rotated(by: CGFloat(M_PI_2))
+            
+        case .right, .rightMirrored:
+            transform = transform.translatedBy(x: 0, y: size.height)
+            transform = transform.rotated(by: CGFloat(-M_PI_2))
+            
+        case .up, .upMirrored:
+            break
+        }
+        
+        switch imageOrientation {
+            
+        case .upMirrored, .downMirrored:
+            transform.translatedBy(x: size.width, y: 0)
+            transform.scaledBy(x: -1, y: 1)
+            
+        case .leftMirrored, .rightMirrored:
+            transform.translatedBy(x: size.height, y: 0)
+            transform.scaledBy(x: -1, y: 1)
+            
+        case .up, .down, .left, .right:
+            break
+        }
+        
+        if let ctx = CGContext(data: nil, width: Int(size.width), height: Int(size.height), bitsPerComponent: cgImage.bitsPerComponent, bytesPerRow: 0, space: cgImage.colorSpace!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) {
+            
+            ctx.concatenate(transform)
+            
+            switch imageOrientation {
+                
+            case .left, .leftMirrored, .right, .rightMirrored:
+                ctx.draw(cgImage, in: CGRect(x: 0, y: 0, width: size.height, height: size.width))
+                
+            default:
+                ctx.draw(cgImage, in: CGRect(x: 0, y: 0, width: size.width, height: size.height))
+            }
+            
+            if let finalImage = ctx.makeImage() {
+                return (UIImage(cgImage: finalImage))
+            }
+        }
+        
+        // something failed -- return original
+        return self
+    }
+}
 
 @available(iOS 11.0, *)
 class PhotoImageWriter {
@@ -42,12 +107,17 @@ class PhotoImageWriter {
     @available(iOS 11.0, *)
     func writeCapturePhoto(_ capturePhoto : AVCapturePhoto) -> URL? {
 
-        
+        let unmanagedCGImage = capturePhoto.cgImageRepresentation()!
+        let cgImage1 = unmanagedCGImage.takeUnretainedValue()
+        let uiImage1 : UIImage = UIImage(cgImage: cgImage1)
+        print(capturePhoto.metadata);
+        print(capturePhoto.metadata[kCGImagePropertyOrientation as String]!);
+//        print(capturePhoto.)
         guard let imageData = capturePhoto.fileDataRepresentation() else {
             print("Error while generating image from photo capture data.");
             return nil
         }
-        
+//        UIImage(
         guard let uiImage = UIImage(data: imageData) else {
             print("Unable to generate UIImage from image data.");
             return nil
@@ -61,15 +131,18 @@ class PhotoImageWriter {
         }
         
         
-        let croppedImage = cgImage.cropping(to: CGRect(x: 0, y: 840, width: 1080, height: 1080))!
-        let uiImage2 = UIImage(cgImage: croppedImage)
+//        let croppedImage = cgImage.cropping(to: CGRect(x: 0, y: 0, width: 1080, height: 1080))!
+        let croppedImage = cgImage1.cropping(to: CGRect(x: 0, y: 0, width: 1080, height: 1080))!
+
+        let uiImage2 = UIImage(cgImage: croppedImage, scale: 1.0, orientation: UIImageOrientation.right)
+        let uiImage3 = uiImage2.fixOrientation()
 
         let uuid = UUID().uuidString
 
         let outFileUrl = URL.init(fileURLWithPath: "\(basePath)/\(uuid).png")
         print(outFileUrl)
 
-        if let data = UIImagePNGRepresentation(uiImage) {
+        if let data = UIImagePNGRepresentation(uiImage3) {
             try? data.write(to: outFileUrl)
         }
         return outFileUrl
