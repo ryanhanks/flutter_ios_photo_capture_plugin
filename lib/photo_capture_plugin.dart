@@ -11,7 +11,8 @@ class PhotoCapturePlugin {
     final String version = await _channel.invokeMethod('getPlatformVersion');
     return version;
   }
-  static Future<PhotoCaptureSession> get photoCaptureSession async {
-    return Future.value(PhotoCaptureSession.initialize());
-  }
+//  static Future<PhotoCaptureSession> get photoCaptureSession async {
+//    PhotoCaptureSession.initialize();
+//    return Future.value();
+//  }
 }
